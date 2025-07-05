@@ -5,7 +5,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 
 const app = express();
-const PORT = 3001;
+const PORT = process.env.PORT || 3001;
 
 // 中间件
 app.use(cors());
@@ -127,7 +127,7 @@ app.delete('/api/word-file/:themeId', async (req, res) => {
   }
 });
 
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`服务器运行在 http://localhost:${PORT}`);
   console.log(`Word文件夹路径: ${wordFolder}`);
 }); 

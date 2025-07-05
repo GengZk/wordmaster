@@ -2,9 +2,9 @@
   "name": "wordmaster",
   "version": "1.0.0",
   "description": "主题英语单词学习应用",
-  "main": "server-simple.js",
+  "main": "server-cyclic.js",
   "scripts": {
-    "start": "node server-simple.js",
+    "start": "node server-cyclic.js",
     "build": "npm run build:frontend",
     "build:frontend": "vite build"
   },

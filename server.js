@@ -5,12 +5,11 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 
 const app = express();
-const PORT = 3001;
+const PORT = process.env.PORT || 3000;
 
 // 中间件
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
-app.use(express.static('dist')); // 服务Vue构建文件
 
 // 获取当前文件的目录
 const __filename = fileURLToPath(import.meta.url);
@@ -20,28 +19,37 @@ const __dirname = path.dirname(__filename);
 const wordFolder = path.join(__dirname, 'word');
 fs.mkdir(wordFolder, { recursive: true }).catch(console.error);
 
-// API路由：保存主题JSON文件
-app.post('/api/save-word-file', async (req, res) => {
+// 静态文件服务
+app.use(express.static(path.join(__dirname, 'dist')));
+
+// 测试路由
+app.get('/api/test', (req, res) => {
+  res.json({ message: '服务器运行正常' });
+});
+
+// API路由：获取所有主题文件列表
+app.get('/api/word-files', async (req, res) => {
   try {
-    const { themeId, data } = req.body;
+    const files = await fs.readdir(wordFolder);
+    const jsonFiles = files.filter(file => file.endsWith('.json'));
     
-    if (!themeId || !data) {
-      return res.status(400).json({ error: '缺少必要参数' });
+    const themes = [];
+    for (const file of jsonFiles) {
+      try {
+        const filePath = path.join(wordFolder, file);
+        const content = await fs.readFile(filePath, 'utf8');
+        const data = JSON.parse(content);
+        themes.push(data.theme);
+      } catch (error) {
+        console.error(`读取文件 ${file} 失败:`, error);
+      }
     }
     
-    // 生成文件名
-    const fileName = `theme_${themeId}.json`;
-    const filePath = path.join(wordFolder, fileName);
-    
-    // 保存JSON文件
-    await fs.writeFile(filePath, JSON.stringify(data, null, 2), 'utf8');
-    
-    console.log(`主题文件已保存: ${filePath}`);
-    res.json({ success: true, filePath: fileName });
+    res.json(themes);
     
   } catch (error) {
-    console.error('保存文件失败:', error);
-    res.status(500).json({ error: '保存文件失败' });
+    console.error('获取主题列表失败:', error);
+    res.status(500).json({ error: '获取主题列表失败' });
   }
 });
 
@@ -71,33 +79,32 @@ app.get('/api/word-file/:themeId', async (req, res) => {
   }
 });
 
-// API路由：获取所有主题文件列表
-app.get('/api/word-files', async (req, res) => {
+// API路由：保存主题JSON文件
+app.post('/api/save-word-file', async (req, res) => {
   try {
-    const files = await fs.readdir(wordFolder);
-    const jsonFiles = files.filter(file => file.endsWith('.json'));
+    const { themeId, data } = req.body;
     
-    const themes = [];
-    for (const file of jsonFiles) {
-      try {
-        const filePath = path.join(wordFolder, file);
-        const content = await fs.readFile(filePath, 'utf8');
-        const data = JSON.parse(content);
-        themes.push(data.theme);
-      } catch (error) {
-        console.error(`读取文件 ${file} 失败:`, error);
-      }
+    if (!themeId || !data) {
+      return res.status(400).json({ error: '缺少必要参数' });
     }
     
-    res.json(themes);
+    // 生成文件名
+    const fileName = `theme_${themeId}.json`;
+    const filePath = path.join(wordFolder, fileName);
+    
+    // 保存JSON文件
+    await fs.writeFile(filePath, JSON.stringify(data, null, 2), 'utf8');
+    
+    console.log(`主题文件已保存: ${filePath}`);
+    res.json({ success: true, filePath: fileName });
     
   } catch (error) {
-    console.error('获取主题列表失败:', error);
-    res.status(500).json({ error: '获取主题列表失败' });
+    console.error('保存文件失败:', error);
+    res.status(500).json({ error: '保存文件失败' });
   }
 });
 
-// API路由：删除主题文件
+// API路由：删除主题JSON文件
 app.delete('/api/word-file/:themeId', async (req, res) => {
   try {
     const { themeId } = req.params;
@@ -111,11 +118,11 @@ app.delete('/api/word-file/:themeId', async (req, res) => {
       return res.status(404).json({ error: '主题文件不存在' });
     }
     
-    // 删除文件
+    // 删除JSON文件
     await fs.unlink(filePath);
     
     console.log(`主题文件已删除: ${filePath}`);
-    res.json({ success: true });
+    res.json({ success: true, message: '主题文件删除成功' });
     
   } catch (error) {
     console.error('删除文件失败:', error);
@@ -123,12 +130,12 @@ app.delete('/api/word-file/:themeId', async (req, res) => {
   }
 });
 
-// 处理Vue路由
+// 所有其他路由返回前端应用
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });
 
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`服务器运行在 http://localhost:${PORT}`);
   console.log(`Word文件夹路径: ${wordFolder}`);
 }); 

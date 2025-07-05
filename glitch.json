@@ -1,6 +1,6 @@
 {
-  "install": "npm install",
-  "start": "node server-simple.js",
+  "install": "npm install && npm run build",
+  "start": "node server.js",
   "watch": {
     "install": {
       "include": [
